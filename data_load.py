@@ -35,7 +35,7 @@ def load_data(data_dir):
     validloaders = torch.utils.data.DataLoader(valid_datasets, batch_size=64, shuffle=False)
     testloaders = torch.utils.data.DataLoader(test_datasets, batch_size=64, shuffle=False)
 
-    return trainloaders, validloaders, testloaders
+    return trainloaders, validloaders, testloaders, train_datasets.class_to_idx
 
 
 def load_categories(category_name):

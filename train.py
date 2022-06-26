@@ -12,19 +12,20 @@ if __name__ == "__main__":
     parser.add_argument('data_dir', help='data directory with train, validation, test dataset')
     parser.add_argument('--save_dir', default='saved_models',
                         help='set directory to save checkpoints')
-    parser.add_argument('--arch', default='vgg11', help='model architecture in torchvision.models')
+    parser.add_argument('--arch', default='vgg', help='model architecture: resnet, alexnet or vgg')
     parser.add_argument('--lr', type=float, default=0.001, help='set hyperparameters: learning rate')
     parser.add_argument('--hidden_units', type=int, default=4096,
                         help='set hyperparameters: hidden units')
     parser.add_argument('--epochs', type=int, default=2, help='set hyperparameters: epochs')
     parser.add_argument('--category_name', default='cat_to_name.json',
                         help='Use a mapping of categories to real names')
+    parser.add_argument('--gpu', action="store_true", default=False)
     args = parser.parse_args()
     print('parse arguments:\n\t', args, '\n')
 
     # load data
     data_dir = args.data_dir
-    trainloaders, validloaders, testloaders = load_data(data_dir)
+    trainloaders, validloaders, testloaders, class_to_idx = load_data(data_dir)
 
     # model
     arch = args.arch
@@ -33,17 +34,18 @@ if __name__ == "__main__":
     category_name = args.category_name
     cat_to_name = load_categories(category_name)
     output_units= len(cat_to_name)
-    model, criterion, optimizer = create_model(arch, lr, hidden_units, output_units)
+    model, criterion, optimizer = create_model(arch, lr, hidden_units, output_units, class_to_idx)
     print('model:\n\t', model, '\n')
 
     # train classifier, track train loss, valid loss, and accuracy
     epochs = args.epochs
+    gpu = args.gpu
     running_loss = 0
     train_losses = []
     valid_losses = []
     print_every = 10
     track_per_epochs = int(len(trainloaders)/print_every)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() and gpu else "cpu")
     model.to(device)
     for e in range(epochs):
 

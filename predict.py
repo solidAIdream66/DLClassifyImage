@@ -72,21 +72,23 @@ def imshow(image, ax=None, title=None):
     return ax
 
 
-def predict(image_path, model, topk=5):
+def predict(image_path, checkpoint, topk=5, gpu=False):
     ''' Predict the class (or classes) of an image using a trained deep learning model.
     '''
-
     # TODO: Implement the code to predict the class from an image file
+    device = torch.device("cuda" if torch.cuda.is_available() and gpu else "cpu")
+    model, criterion, optimizer = load_checkpoint(checkpoint)
+    model.to(device)
     with Image.open(image_path) as image:
         image = process_image(image)
-
+        image = image.to(device)
         model.eval()
         logps = model.forward(image)
         ps = torch.exp(logps)
         probs, indices = ps.topk(topk, dim=1)
         probs = [p.item() for p in probs.view(-1)]
-        classes = [str(i.item()+1) for i in indices.view(-1)]
-    return image[0], probs, classes
+        classes = [str(model.class_to_idx[str(i.item()+1)]+1) for i in indices.view(-1)]
+    return image[0].cpu(), probs, classes
 
 if __name__ == "__main__":
     # parse arguments
@@ -98,21 +100,20 @@ if __name__ == "__main__":
     parser.add_argument('--top_k', type=int, default=3, help='return top K most likely classes')
     parser.add_argument('--category_name', default='cat_to_name.json',
                         help='Use a mapping of categories to real names')
+    parser.add_argument('--gpu', action="store_true", default=False)
     args = parser.parse_args()
     print('parse arguments:\n\t', args, '\n')
 
-    # model
-    checkpoint = args.checkpoint
-    category_name = args.category_name
-    model, criterion, optimizer = load_checkpoint(checkpoint)
-    cat_to_name = load_categories(category_name)
-
     # predict
+    checkpoint = args.checkpoint
     image_path = args.image_path
     top_k = args.top_k
-    image, probs, classes = predict(image_path, model, top_k)
+    category_name = args.category_name
+    gpu = args.gpu
+    cat_to_name = load_categories(category_name)
+    image, probs, classes = predict(image_path, checkpoint, top_k, gpu)
     flowers = [cat_to_name[c] for c in classes]
-    print('predict:\n\t', probs, '\n\t', flowers)
+    print('predict:\n\t', probs, '\n\t', classes, '\n\t', flowers)
 
     # visulize
     fig, (ax1, ax2) = plt.subplots(figsize=(6,6), nrows=2)
